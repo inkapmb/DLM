@@ -1,0 +1,233 @@
+#!/bin/bash
+
+#DLM_V1
+#By Inkaseed
+
+
+############################################################
+#Function                                                  #
+############################################################
+
+#Help
+
+
+Help()
+{
+printf "\033[90m############################################################\033[0m\n"
+printf "                          \033[1m\033[4mDLM HELP\033[0m\n"
+printf "\033[90m############################################################\033[0m\n"
+printf "\n"
+printf "DLM download and convert musique to .mp3 from soundcloud and youtube.\n"
+printf "\n"
+printf "Requierement : \n"
+printf "	> have 'yt-dlp' installed\n"
+printf "	> have 'ffmpeg' installed\n"
+printf "	> have 'lame' installed\n"
+printf "\n"
+printf "\033[1mSyntaxe :\033[0m \033[94mDLM\033[0m [\033[94m-options\033[0m] \033[94mlist.txt\033[0m \n"
+printf "\n"
+printf "\033[1mOptions :\033[0m \n"
+printf "	\033[94m-h\033[0m	display this message\n"
+printf "\n"
+printf "\033[90m############################################################\033[0m\n"
+}
+
+#warning sign
+
+wrn()
+{
+printf "\033[5m\033[1m\033[93m<!>\033[0m\e[25m"
+}
+
+############################################################
+#Main                                                      #
+############################################################
+
+#def var
+
+co=1
+
+#get options
+
+while getopts ":hys:" option;
+do
+	case $option in
+	
+      		h) # display Help
+         		Help
+			((co++))
+         		exit;;
+         		
+			
+				
+         	\?) # Invalid option
+         		echo "Error: Invalid option"
+         		exit;;
+   	esac
+done
+
+##################################################################
+#Pre Process
+##################################################################
+
+#manage pointer
+pf_path=$(($co))
+input_file=${!pf_path}
+
+#test if input_file exist
+if [[ ! -f "$input_file" ]] ; then
+	wrn
+	printf " No input input file (URL list)\n"
+	exit;
+fi
+
+#dir path
+d_path=$(echo ${input_file%/*})
+os_path="$d_path/tracks_old/"
+path="$d_path/tracks/"
+
+#print outpath
+printf "\033[1m\033[94mOut path\033[0m : $path\n"
+
+if [[ ${#d_path} != 0 ]] ;  then
+	cd $d_path
+fi
+
+#test output path
+if [[ -d $path ]] ; then
+	
+	lo=$(ls "$path")
+	
+	if [[ ${#lo} != 0 ]] ; then
+	
+		#if it exist move all files in another
+		if [[ ! -d "$os_path" ]] ; then
+	
+			mkdir "$os_path"
+		
+		fi
+	
+		#Move old file
+		for song in "$(ls "$path")" ; do
+		
+			mv "${path}${song}" "${os_path}${song}"
+	
+		done
+		
+		printf "\nThose old file(s) : \n\033[2m$lo\033[22m \nwere moved to \033[1m$os_path\033[0m\n\n"
+		
+	fi
+else	
+	
+	mkdir tracks
+	
+fi
+
+##################################################################
+#Main loop
+##################################################################
+
+while read -r line ;
+do	
+	
+	if [[ $line == *"youtube"* ]] ; then
+	
+		#dl audio + thumbnail
+	
+		printf "Downloading \033[1m$line\033[0m...\n"
+	
+		yt-dlp -f "ba" --write-thumbnail --embed-metadata --geo-bypass -o $path"%(title)s.%(ext)s" $line &>/dev/null
+	
+		printf "\033[A\033[1m$line\033[0m Downloaded!     \n"
+        
+        	#get name
+        	raw_name=$(ls $path | grep .webm)
+        	name=$(echo ${raw_name%.webm})
+        
+        	#get img_name
+        	img_name=$(ls "$path" | grep "${name}" | grep -v ".webm" )
+        
+       	#Convert to mp3
+        
+        	printf "Convert \033[1m$name\033[0m to .mp3...\n"
+        
+        	ffmpeg -i "${path}${raw_name}" -ab 160k -ar 44100 "${path}${name}.mp3" &>/dev/null
+        
+        	printf "\033[A\033[1m$name\033[0m was converted to .mp3!\n"
+        
+        
+        	#merge audio + thumbnail
+        
+        	printf "Merging thumbnail of \033[1m$name\033[0m ...\n"
+        
+        	lame -V2 -h --ti "${path}${img_name}" "${path}${name}.mp3" &>/dev/null
+        
+        	printf "\033[AFile merged!                                                                \n"
+        
+        	#empty the cache
+        	rm -rf .cache/thumbnails/* .thumbnails/*
+        
+        	#delete og file
+        	rm "${path}${raw_name}"
+        	rm "${path}${name}.mp3"
+        	rm "${path}${img_name}"
+        
+        	mv "${path}${name}.mp3.mp3" "${path}${name}.mp3"
+        	
+        elif [[ $line == *"soundcloud"* ]] ; then
+        
+        	#reference
+		ls $path | grep .mp3 > "${path}ref.temp"
+	
+		#dl audio + thumbnail
+		printf "Downloading \033[1m$line\033[0m...\n"
+		
+        	yt-dlp -f "ba" --write-thumbnail --embed-metadata --geo-bypass -o $path"%(title)s.%(ext)s" $line
+        	 
+        	printf "\033[A\033[1m$line\033[0m Downloaded!     \n"
+        
+        	#new reference
+        	ls $path | grep .mp3 > $path"ref+1.temp"
+        	
+        	#get raw_name
+        	raw_name=$(diff $path"ref.temp" $path"ref+1.temp")
+        	
+        	#get real name
+        	if [[ $raw_name == *".mp3" ]] ; then
+        		
+        		name=$(echo ${raw_name%.mp3})
+        		s_ext=".mp3"
+        	
+        	elif [[ $raw_name == *".wav" ]] ; then
+        	
+        		name=$(echo ${raw_name%.wav})
+        		s_ext=".wav"
+        		
+		fi
+		
+		#get img_ext
+        	img_ext=$(ls "$path" | grep "${name}" | grep -v "$s_ext" )
+        
+        	#merge audio + thumbnail
+        	printf "Merging thumbnail of \033[1m$name\033[0m ...\n"
+        	
+        	lame -V2 -h --ti "${path}${name}.${img_ext}" "${path}${name}${s_ext}"
+        	
+        	printf "\033[AFile merged!                                                                \n"
+        
+        	#empty the cache
+        	rm -rf .cache/thumbnails/* .thumbnails/*
+        
+        	#delete og file
+        	rm "${path}${name}.${s_ext}"
+        	rm "${path}${name}.${img_ext}"
+        
+        	#delete .temp list
+        	rm "${path}ref.temp"
+        	rm "${path}ref+1.temp"
+        
+        fi
+        
+done < $input_file
+
+
