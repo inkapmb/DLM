@@ -147,32 +147,20 @@ do
         	#get img_name
         	img_name=$(ls "$path" | grep "${name}" | grep -v ".webm" )
         
-       	#Convert to mp3
+       		#Convert to mp3
         
-        	printf "Convert \033[1m$name\033[0m to .mp3...\n"
+        	printf "Convert \033[1m$name\033[0m to .mp3 and embed thumbnail...\n"
+        	
+        	ffmpeg -i "${path}${raw_name}" -i "${path}${img_name}" -map_metadata 0 -map 0 -map 1 -ab 160k -ar 44100 "${path}${name}.mp3" &>/dev/null
         
-        	ffmpeg -i "${path}${raw_name}" -ab 160k -ar 44100 "${path}${name}.mp3" &>/dev/null
-        
-        	printf "\033[A\033[1m$name\033[0m was converted to .mp3!\n"
-        
-        
-        	#merge audio + thumbnail
-        
-        	printf "Merging thumbnail of \033[1m$name\033[0m ...\n"
-        
-        	lame -V2 -h --ti "${path}${img_name}" "${path}${name}.mp3" &>/dev/null
-        
-        	printf "\033[AFile merged!                                                                \n"
+        	printf "\033[A\033[1m$name\033[0m was converted to .mp3 and thumbnail was embed!\n"
         
         	#empty the cache
         	rm -rf .cache/thumbnails/* .thumbnails/*
         
         	#delete og file
         	rm "${path}${raw_name}"
-        	rm "${path}${name}.mp3"
         	rm "${path}${img_name}"
-        
-        	mv "${path}${name}.mp3.mp3" "${path}${name}.mp3"
         	
         elif [[ $line == *"soundcloud"* ]] ; then
         
