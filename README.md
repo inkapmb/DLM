@@ -7,4 +7,13 @@ run install.sh
 
 ## Use
 
+```
 DLM /user/list_path/list.txt
+```
+
+## Accepted Sources
+
+- Youtube
+- SoundCloud
+
+
