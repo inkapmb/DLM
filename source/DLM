@@ -130,92 +130,31 @@ fi
 while read -r line ;
 do	
 	
-	if [[ $line == *"youtube"* ]] ; then
+	#reference
+	ls $path | grep .mp3 > "${path}ref.temp"	
 	
-		#dl audio + thumbnail
+	#dl audio + thumbnail
 	
-		printf "Downloading \033[1m$line\033[0m...\n"
+	printf "Downloading \033[1m$line\033[0m...\n"
 	
-		yt-dlp -f "ba" --write-thumbnail --embed-metadata --geo-bypass -o $path"%(title)s.%(ext)s" $line &>/dev/null
-	
-		printf "\033[A\033[1m$line\033[0m Downloaded!     \n"
+	yt-dlp --audio-quality 0 --extract-audio --audio-format mp3 -o "%(title)s.%(ext)s" --add-metadata --embed-thumbnail --metadata-from-title  "%(title)" $line &>/dev/null
         
-        	#get name
-        	raw_name=$(ls $path | grep .webm)
-        	name=$(echo ${raw_name%.webm})
-        
-        	#get img_name
-        	img_name=$(ls "$path" | grep "${name}" | grep -v ".webm" )
-        
-       		#Convert to mp3
-        
-        	printf "Convert \033[1m$name\033[0m to .mp3 and embed thumbnail...\n"
+        #new reference
+        ls $path | grep .mp3 > $path"ref+1.temp"
         	
-        	ffmpeg -i "${path}${raw_name}" -i "${path}${img_name}" -map_metadata 0 -map 0 -map 1 -ab 160k -ar 44100 "${path}${name}.mp3" &>/dev/null
+        #get raw_name
+        raw_name=$(diff $path"ref.temp" $path"ref+1.temp")
+        name=$(echo ${raw_name%.mp3})
         
-        	printf "\033[A\033[1m$name\033[0m was converted to .mp3 and thumbnail was embed!\n"
+        printf "\033[A\033[1m$name\033[0m downloaded and converted!     \n"
         
-        	#empty the cache
-        	rm -rf .cache/thumbnails/* .thumbnails/*
+        #empty the cache
+        rm -rf .cache/thumbnails/* .thumbnails/*
         
-        	#delete og file
-        	rm "${path}${raw_name}"
-        	rm "${path}${img_name}"
-        	
-        elif [[ $line == *"soundcloud"* ]] ; then
-        
-        	#reference
-		ls $path | grep .mp3 > "${path}ref.temp"
-	
-		#dl audio + thumbnail
-		printf "Downloading \033[1m$line\033[0m...\n"
-		
-        	yt-dlp -f "ba" --write-thumbnail --embed-metadata --geo-bypass -o $path"%(title)s.%(ext)s" $line
-        	 
-        	printf "\033[A\033[1m$line\033[0m Downloaded!     \n"
-        
-        	#new reference
-        	ls $path | grep .mp3 > $path"ref+1.temp"
-        	
-        	#get raw_name
-        	raw_name=$(diff $path"ref.temp" $path"ref+1.temp")
-        	
-        	#get real name
-        	if [[ $raw_name == *".mp3" ]] ; then
-        		
-        		name=$(echo ${raw_name%.mp3})
-        		s_ext=".mp3"
-        	
-        	elif [[ $raw_name == *".wav" ]] ; then
-        	
-        		name=$(echo ${raw_name%.wav})
-        		s_ext=".wav"
-        		
-		fi
-		
-		#get img_ext
-        	img_ext=$(ls "$path" | grep "${name}" | grep -v "$s_ext" )
-        
-        	#merge audio + thumbnail
-        	printf "Merging thumbnail of \033[1m$name\033[0m ...\n"
-        	
-        	lame -V2 -h --ti "${path}${name}.${img_ext}" "${path}${name}${s_ext}"
-        	
-        	printf "\033[AFile merged!                                                                \n"
-        
-        	#empty the cache
-        	rm -rf .cache/thumbnails/* .thumbnails/*
-        
-        	#delete og file
-        	rm "${path}${name}.${s_ext}"
-        	rm "${path}${name}.${img_ext}"
-        
-        	#delete .temp list
-        	rm "${path}ref.temp"
-        	rm "${path}ref+1.temp"
-        
-        fi
-        
+        #delete .temp list
+        rm "${path}ref.temp"
+        rm "${path}ref+1.temp"
+
 done < $input_file
 
 
