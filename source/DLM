@@ -144,7 +144,7 @@ do
         	
         #get raw_name
         raw_name=$(diff $path"ref.temp" $path"ref+1.temp")
-        name=$(echo ${raw_name%.mp3})
+        name=$(echo ${raw_name%.*})
         
         printf "\033[A\033[1m$name\033[0m downloaded and converted!     \n"
         
